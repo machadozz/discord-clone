@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "./styles/pulse-theme.css";
+
+@theme {
+  --color-pulse-bg: #090D12;
+  --color-pulse-panel: #121820;
+  --color-pulse-card: #1A222D;
+  --color-pulse-hover: #232D3B;
+  --color-pulse-emerald: #10B981;
+  --color-pulse-emeraldHover: #059669;
+  --color-pulse-cyan: #06B6D4;
+  --color-pulse-amber: #F59E0B;
+  --color-pulse-red: #EF4444;
+  --color-pulse-textMain: #F0F6FC;
+  --color-pulse-textMuted: #8B949E;
+  
+  /* Fallback aliases for legacy components */
+  --color-discord-dark: #090D12;
+  --color-discord-darker: #121820;
+  --color-discord-darkest: #1A222D;
+  --color-discord-card: #1A222D;
+  --color-discord-hover: #232D3B;
+  --color-discord-blurple: #10B981;
+  --color-discord-blurpleHover: #059669;
+  --color-discord-green: #10B981;
+  --color-discord-red: #EF4444;
+  --color-discord-yellow: #F59E0B;
+  --color-discord-textNormal: #F0F6FC;
+  --color-discord-textMuted: #8B949E;
+  --color-discord-textFaded: #484F58;
+}
+
+@layer base {
+  body {
+    background-color: #090D12;
+    color: #F0F6FC;
+    overflow: hidden;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Hide default LiveKit grey participant icon SVG when camera is off */
+.lk-video-conference .lk-participant-placeholder,
+.lk-video-conference .lk-avatar-fallback,
+.lk-video-conference svg.lk-participant-placeholder-icon {
+  opacity: 0 !important;
+  display: none !important;
+}
+
+/* Hide ONLY LiveKit's duplicate side carousel container during screen share */
+.lk-focus-layout .lk-carousel {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure main screen share focused video tile is ALWAYS 100% visible */
+.lk-focus-layout .lk-participant-tile,
+.lk-focused-participant,
+[data-lk-source="screen_share"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+

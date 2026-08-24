@@ -1,0 +1,242 @@
+// ==========================================
+// SCHEMA DO BANCO DE DADOS - Discord Clone
+// ==========================================
+// Rode: npx prisma migrate dev --name init
+// (depois de configurar DATABASE_URL no .env)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ------------------------------------------
+// USUÁRIO
+// ------------------------------------------
+model User {
+  id                         String     @id @default(uuid())
+  username                   String     @unique
+  discriminator              String     @default("0001") // tipo "usuario#0001"
+  email                      String     @unique
+  passwordHash               String
+  avatarUrl                  String?
+  bannerUrl                  String?
+  status                     UserStatus @default(OFFLINE)
+  birthdate                  DateTime?
+  isVerified                 Boolean    @default(false)
+  emailVerificationCode      String?
+  emailVerificationExpires   DateTime?
+  passwordResetToken         String?
+  passwordResetExpires       DateTime?
+  refreshToken               String?
+  isTwoFactorEnabled         Boolean    @default(false)
+  twoFactorSecret            String?
+  googleId                   String?
+  githubId                   String?
+  createdAt                  DateTime   @default(now())
+  updatedAt                  DateTime   @updatedAt
+
+  // relações
+  ownedServers        Server[]        @relation("ServerOwner")
+  memberships         Member[]
+  messages            Message[]
+  directMessages      DirectMessage[] @relation("DMSender")
+  friendshipsSent     Friendship[]    @relation("FriendshipRequester")
+  friendshipsReceived Friendship[]    @relation("FriendshipReceiver")
+  serverBans          ServerBan[]
+
+  @@unique([username, discriminator])
+  @@map("users")
+}
+
+enum UserStatus {
+  ONLINE
+  IDLE
+  DND // não perturbe
+  OFFLINE
+}
+
+// ------------------------------------------
+// SERVIDOR (equivalente a "guild" no Discord)
+// ------------------------------------------
+model Server {
+  id        String   @id @default(uuid())
+  name      String
+  iconUrl   String?
+  inviteCode String  @unique @default(cuid())
+  ownerId   String
+  owner     User     @relation("ServerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  channels  Channel[]
+  members   Member[]
+  roles     Role[]
+  bans      ServerBan[]
+
+  @@map("servers")
+}
+
+// ------------------------------------------
+// BANIMENTOS DE SERVIDOR
+// ------------------------------------------
+model ServerBan {
+  id        String   @id @default(uuid())
+  serverId  String
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([serverId, userId])
+  @@map("server_bans")
+}
+
+// ------------------------------------------
+// MEMBRO (usuário dentro de um servidor específico)
+// apelido, roles, etc podem ser diferentes por servidor
+// ------------------------------------------
+model Member {
+  id        String   @id @default(uuid())
+  nickname  String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serverId  String
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+
+  roles     MemberRole[]
+  messages  Message[]
+
+  @@unique([userId, serverId]) // usuário só pode entrar 1x no mesmo servidor
+  @@map("members")
+}
+
+// ------------------------------------------
+// ROLES / PERMISSÕES (ex: Admin, Moderador, Membro)
+// ------------------------------------------
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  color       String   @default("#99AAB5")
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  // permissões como flags booleanas (simples de entender e expandir)
+  canManageChannels Boolean @default(false)
+  canManageRoles    Boolean @default(false)
+  canKickMembers    Boolean @default(false)
+  canBanMembers     Boolean @default(false)
+  canSendMessages   Boolean @default(true)
+  canDeleteMessages Boolean @default(false)
+  canConnectVoice   Boolean @default(true)
+
+  members     MemberRole[]
+
+  @@map("roles")
+}
+
+model MemberRole {
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  roleId   String
+  role     Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, roleId])
+  @@map("member_roles")
+}
+
+// ------------------------------------------
+// CANAL (texto ou voz, dentro de um servidor)
+// ------------------------------------------
+model Channel {
+  id        String      @id @default(uuid())
+  name      String
+  type      ChannelType @default(TEXT)
+  topic     String?
+  position  Int         @default(0)
+  serverId  String
+  server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  messages  Message[]
+
+  @@map("channels")
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+}
+
+// ------------------------------------------
+// MENSAGEM (dentro de um canal de servidor)
+// ------------------------------------------
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId  String   // referência ao User (dono da conta)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  memberId  String?  // referência ao Member (contexto do servidor - nickname, etc)
+  member    Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  editedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([channelId, createdAt])
+  @@map("messages")
+}
+
+// ------------------------------------------
+// AMIZADES (para permitir DM)
+// ------------------------------------------
+model Friendship {
+  id          String            @id @default(uuid())
+  requesterId String
+  requester   User              @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User              @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus  @default(PENDING)
+  createdAt   DateTime          @default(now())
+
+  @@unique([requesterId, receiverId])
+  @@map("friendships")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+// ------------------------------------------
+// DM - CONVERSA PRIVADA (1 a 1, fora de servidores)
+// ------------------------------------------
+model DMConversation {
+  id        String   @id @default(uuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+
+  messages  DirectMessage[]
+
+  @@unique([userAId, userBId])
+  @@map("dm_conversations")
+}
+
+model DirectMessage {
+  id             String         @id @default(uuid())
+  content        String
+  conversationId String
+  conversation   DMConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User           @relation("DMSender", fields: [senderId], references: [id], onDelete: Cascade)
+  editedAt       DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("direct_messages")
+}

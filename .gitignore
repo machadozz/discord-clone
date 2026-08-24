@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Build e arquivos de saida
+dist/
+**/dist/
+build/
+*.tsbuildinfo
+
+# Variaveis de ambiente sensiveis
+.env
+**/.env
+!.env.example
+
+# Banco de dados local e uploads
+*.db
+*.db-journal
+backend/dev.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+**/dev.db
+**/uploads/*
+
+# IDEs e sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
