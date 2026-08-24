@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { VerifyEmailModal } from '../components/auth/VerifyEmailModal';
 import { ForgotPasswordModal } from '../components/auth/ForgotPasswordModal';
 import { TwoFactorModal } from '../components/auth/TwoFactorModal';
+import { GoogleOAuthModal } from '../components/auth/GoogleOAuthModal';
 import { Flame, LogIn, Lock, User, CheckSquare, Square, Code2, Globe } from 'lucide-react';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
@@ -25,6 +26,8 @@ export function Login() {
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [authProvider, setAuthProvider] = useState<'google' | 'github'>('google');
   const [twoFactorUserId, setTwoFactorUserId] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
@@ -67,14 +70,14 @@ export function Login() {
     }
   };
 
-  // DIRECT GOOGLE OAUTH POPUP (Google Identity Services GIS One Tap & Modal Fallback)
+  // DIRECT GOOGLE / GITHUB OAUTH POPUP (Google Identity Services GIS One Tap & Modal Fallback)
   const handleGoogleLoginDirect = () => {
+    setAuthProvider('google');
     if (window.google?.accounts?.id) {
       try {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredentialResponse,
-          auto_select: true,
         });
         window.google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
@@ -87,6 +90,11 @@ export function Login() {
       }
     }
 
+    setShowGoogleModal(true);
+  };
+
+  const handleGitHubLoginDirect = () => {
+    setAuthProvider('github');
     setShowGoogleModal(true);
   };
 
@@ -152,7 +160,7 @@ export function Login() {
             </button>
             <button
               type="button"
-              onClick={handleGoogleLoginDirect}
+              onClick={handleGitHubLoginDirect}
               className="bg-[#121820] hover:bg-[#1A222D] text-white border border-white/10 p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer btn-motion"
             >
               <Code2 size={16} className="text-cyan-400" />
@@ -276,6 +284,14 @@ export function Login() {
           rememberMe={rememberMe}
           onSuccess={() => navigate('/app')}
           onClose={() => setShowTwoFactorModal(false)}
+        />
+      )}
+
+      {showGoogleModal && (
+        <GoogleOAuthModal
+          provider={authProvider}
+          onSuccess={() => navigate('/app')}
+          onClose={() => setShowGoogleModal(false)}
         />
       )}
     </div>
