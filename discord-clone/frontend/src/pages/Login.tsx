@@ -4,8 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { VerifyEmailModal } from '../components/auth/VerifyEmailModal';
 import { ForgotPasswordModal } from '../components/auth/ForgotPasswordModal';
 import { TwoFactorModal } from '../components/auth/TwoFactorModal';
-import { GoogleOAuthModal } from '../components/auth/GoogleOAuthModal';
-import { Flame, LogIn, Lock, User, CheckSquare, Square, Code2, Globe } from 'lucide-react';
+import { Flame, LogIn, Lock, User, CheckSquare, Square, Globe } from 'lucide-react';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
 
@@ -26,8 +25,6 @@ export function Login() {
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [authProvider, setAuthProvider] = useState<'google' | 'github'>('google');
   const [twoFactorUserId, setTwoFactorUserId] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
@@ -37,16 +34,35 @@ export function Login() {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '510885981110-3mupj2h3okrdo2ohck1u8kfnpfdk9vjh.apps.googleusercontent.com';
 
   useEffect(() => {
-    if (window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-        });
-      } catch (err) {
-        console.warn('Google Identity Services setup warning:', err);
+    const initGoogle = () => {
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredentialResponse,
+          });
+
+          const container = document.getElementById('google-btn-container');
+          if (container) {
+            window.google.accounts.id.renderButton(container, {
+              theme: 'filled_black',
+              size: 'large',
+              width: '100%',
+              type: 'standard',
+              shape: 'rectangular',
+              text: 'signin_with',
+              logo_alignment: 'left',
+            });
+          }
+        } catch (err) {
+          console.warn('Google GIS setup warning:', err);
+        }
       }
-    }
+    };
+
+    initGoogle();
+    const timer = setTimeout(initGoogle, 1000);
+    return () => clearTimeout(timer);
   }, [GOOGLE_CLIENT_ID]);
 
   const handleGoogleCredentialResponse = async (response: any) => {
@@ -70,15 +86,19 @@ export function Login() {
     }
   };
 
-  // DIRECT GOOGLE / GITHUB OAUTH POPUP (Seamless Modal Connection)
+  // DIRECT OFFICIAL GOOGLE POPUP PROMPT
   const handleGoogleLoginDirect = () => {
-    setAuthProvider('google');
-    setShowGoogleModal(true);
-  };
-
-  const handleGitHubLoginDirect = () => {
-    setAuthProvider('github');
-    setShowGoogleModal(true);
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredentialResponse,
+        });
+        window.google.accounts.id.prompt();
+      } catch (err) {
+        console.warn('Google prompt warn:', err);
+      }
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -131,23 +151,16 @@ export function Login() {
             <p className="text-xs text-[#8B949E] mt-1 font-medium">Estamos muito felizes em ver você novamente!</p>
           </div>
 
-          {/* Social OAuth Buttons */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          {/* Official Google OAuth Sign-In Button */}
+          <div className="mb-5 space-y-2">
+            <div id="google-btn-container" className="w-full flex justify-center min-h-[44px]"></div>
             <button
               type="button"
               onClick={handleGoogleLoginDirect}
-              className="bg-[#121820] hover:bg-[#1A222D] text-white border border-white/10 p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer btn-motion"
+              className="w-full bg-[#121820] hover:bg-[#1A222D] text-white border border-white/10 p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer btn-motion"
             >
               <Globe size={16} className="text-rose-400" />
-              <span>Entrar com Google</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleGitHubLoginDirect}
-              className="bg-[#121820] hover:bg-[#1A222D] text-white border border-white/10 p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer btn-motion"
-            >
-              <Code2 size={16} className="text-cyan-400" />
-              <span>Entrar com GitHub</span>
+              <span>Entrar com Conta do Google (Pop-up Direto)</span>
             </button>
           </div>
 
@@ -267,14 +280,6 @@ export function Login() {
           rememberMe={rememberMe}
           onSuccess={() => navigate('/app')}
           onClose={() => setShowTwoFactorModal(false)}
-        />
-      )}
-
-      {showGoogleModal && (
-        <GoogleOAuthModal
-          provider={authProvider}
-          onSuccess={() => navigate('/app')}
-          onClose={() => setShowGoogleModal(false)}
         />
       )}
     </div>
