@@ -152,16 +152,8 @@ export function Login() {
           </div>
 
           {/* Official Google OAuth Sign-In Button */}
-          <div className="mb-5 space-y-2">
+          <div className="mb-5 flex justify-center">
             <div id="google-btn-container" className="w-full flex justify-center min-h-[44px]"></div>
-            <button
-              type="button"
-              onClick={handleGoogleLoginDirect}
-              className="w-full bg-[#121820] hover:bg-[#1A222D] text-white border border-white/10 p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer btn-motion"
-            >
-              <Globe size={16} className="text-rose-400" />
-              <span>Entrar com Conta do Google (Pop-up Direto)</span>
-            </button>
           </div>
 
           <div className="relative flex py-2 items-center mb-4">

@@ -280,15 +280,21 @@ export class AuthService {
 
     if (dto.credential) {
       try {
-        const payloadBase64 = dto.credential.split('.')[1];
-        const decodedJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
-        const googleUser = JSON.parse(decodedJson);
+        let payloadBase64 = dto.credential.split('.')[1];
+        if (payloadBase64) {
+          payloadBase64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+          while (payloadBase64.length % 4 !== 0) {
+            payloadBase64 += '=';
+          }
+          const decodedJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+          const googleUser = JSON.parse(decodedJson);
 
-        if (googleUser.email) {
-          email = googleUser.email;
-          name = googleUser.name || googleUser.email.split('@')[0];
-          avatarUrl = googleUser.picture || avatarUrl;
-          providerId = googleUser.sub || providerId;
+          if (googleUser.email) {
+            email = googleUser.email;
+            name = googleUser.name || googleUser.email.split('@')[0];
+            avatarUrl = googleUser.picture || avatarUrl;
+            providerId = googleUser.sub || providerId;
+          }
         }
       } catch (err: any) {
         this.logger.warn(`Falha ao decodificar Google Credential Token: ${err?.message}`);
