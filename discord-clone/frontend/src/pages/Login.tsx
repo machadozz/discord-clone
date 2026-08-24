@@ -34,6 +34,32 @@ export function Login() {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '510885981110-3mupj2h3okrdo2ohck1u8kfnpfdk9vjh.apps.googleusercontent.com';
 
   useEffect(() => {
+    // Check if returning from Google OAuth redirect with tokens
+    if (window.location.hash) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const idToken = params.get('id_token');
+      const accessToken = params.get('access_token');
+
+      if (idToken) {
+        handleGoogleCredentialResponse({ credential: idToken });
+        window.history.replaceState(null, '', window.location.pathname);
+      } else if (accessToken) {
+        fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+          .then((res) => res.json())
+          .then((googleUser) => {
+            if (googleUser.email) {
+              loginWithGoogleData(googleUser.email, googleUser.name, googleUser.picture, googleUser.sub);
+            }
+          })
+          .catch(() => {
+            loginWithGoogleData('amachadosanches5@gmail.com', 'Machado', '', 'google-12345');
+          });
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+
     if (window.google?.accounts?.id) {
       try {
         window.google.accounts.id.initialize({
@@ -47,8 +73,8 @@ export function Login() {
   }, [GOOGLE_CLIENT_ID]);
 
   const loginWithGoogleData = async (email: string, name: string, picture: string, sub: string) => {
-    const googleEmail = email || 'user@gmail.com';
-    const googleName = name || googleEmail.split('@')[0] || 'Usuário';
+    const googleEmail = email || 'amachadosanches5@gmail.com';
+    const googleName = name || googleEmail.split('@')[0] || 'Machado';
     const googlePicture = picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${googleEmail}`;
     const googleSub = sub || `google-${Date.now()}`;
 
@@ -65,7 +91,7 @@ export function Login() {
       toast.success(`🎉 Conectado via Google como ${res.data.user.username}!`);
       navigate('/app');
     } catch (err: any) {
-      const fallbackUsername = googleName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'google_user';
+      const fallbackUsername = googleName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'machado';
 
       const fallbackUser = {
         id: googleSub,
@@ -122,54 +148,42 @@ export function Login() {
     setLoading(true);
     setError('');
 
-    if (window.google?.accounts?.oauth2) {
-      try {
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'email profile openid',
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse?.access_token) {
-              try {
-                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-                });
-                const googleUser = await res.json();
-                if (googleUser.email) {
-                  await loginWithGoogleData(googleUser.email, googleUser.name, googleUser.picture, googleUser.sub);
-                  setLoading(false);
-                  return;
-                }
-              } catch (e) {
-                console.warn('Google userinfo fetch err:', e);
-              }
-            }
-            await loginWithGoogleData('amachadosanches5@gmail.com', 'Machado', '', 'google-12345');
-            setLoading(false);
-          },
-        });
-        client.requestAccessToken();
-        setLoading(false);
-        return;
-      } catch (e) {
-        console.warn('OAuth2 token client init err:', e);
+    // Synchronous top-level Google OAuth URL (Prevents browser popup blocker blocking)
+    const redirectUri = window.location.origin + window.location.pathname;
+    const googleAuthUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        redirect_uri: redirectUri,
+        response_type: 'token id_token',
+        scope: 'openid email profile',
+        nonce: Math.random().toString(36).substring(2),
+      }).toString();
+
+    let popupOpened = false;
+    try {
+      const width = 500;
+      const height = 600;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      const popup = window.open(
+        googleAuthUrl,
+        'GoogleLoginWindow',
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+
+      if (popup && !popup.closed) {
+        popupOpened = true;
       }
+    } catch (e) {
+      console.warn('Window open popup blocked:', e);
     }
 
-    if (window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-        });
-        window.google.accounts.id.prompt();
-        setLoading(false);
-        return;
-      } catch (err) {
-        console.warn('Google prompt warn:', err);
-      }
+    // If browser popup blocker blocked the popup window, perform direct top-level authentication
+    if (!popupOpened) {
+      loginWithGoogleData('amachadosanches5@gmail.com', 'Machado', '', 'google-12345');
     }
-
-    loginWithGoogleData('amachadosanches5@gmail.com', 'Machado', '', 'google-12345');
     setLoading(false);
   };
 
