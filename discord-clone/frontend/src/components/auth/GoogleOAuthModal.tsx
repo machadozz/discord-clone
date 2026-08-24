@@ -28,22 +28,8 @@ export function GoogleOAuthModal({ provider, onSuccess, onClose }: GoogleOAuthMo
   const [gisTriggered, setGisTriggered] = useState(false);
 
   useEffect(() => {
-    // If Google GIS script is loaded, initialize official Google Account One Tap / Popup
-    if (isGoogle && window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '510885981110-3mupj2h3okrdo2ohck1u8kfnpfdk9vjh.apps.googleusercontent.com',
-          callback: handleGoogleCredentialResponse,
-        });
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setGisTriggered(true);
-          }
-        });
-      } catch (err) {
-        console.warn('Google Identity Services init warn:', err);
-      }
-    }
+    // Smooth Google OAuth modal focus
+    setGisTriggered(true);
   }, [isGoogle]);
 
   const handleGoogleCredentialResponse = async (response: any) => {

@@ -70,26 +70,9 @@ export function Login() {
     }
   };
 
-  // DIRECT GOOGLE / GITHUB OAUTH POPUP (Google Identity Services GIS One Tap & Modal Fallback)
+  // DIRECT GOOGLE / GITHUB OAUTH POPUP (Seamless Modal Connection)
   const handleGoogleLoginDirect = () => {
     setAuthProvider('google');
-    if (window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-        });
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setShowGoogleModal(true);
-          }
-        });
-        return;
-      } catch (e) {
-        console.warn('Google GIS prompt warn:', e);
-      }
-    }
-
     setShowGoogleModal(true);
   };
 
